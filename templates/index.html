@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Adaptive Underwater Image Enhancement</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <style>
+        :root {
+            --primary: #38bdf8;       /* bright cyan */
+            --primary-dark: #0ea5e9;
+            --text: #0f172a;          /* dark text for light bg */
+            --glass: rgba(255, 255, 255, 0.72);
+            --glass-border: rgba(56, 189, 248, 0.35);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--text);
+            background: url('https://images.unsplash.com/photo-1505118380757-91f5f5632de0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover no-repeat fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(224, 247, 255, 0.82), rgba(186, 230, 253, 0.72));
+            z-index: -2;
+        }
+        #particles-js {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        nav {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            padding: 1rem 5%;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .nav-links a {
+            color: #0f172a;
+            text-decoration: none;
+            margin: 0 1.4rem;
+            font-weight: 600;
+            position: relative;
+            transition: color 0.3s;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2.5px;
+            bottom: -5px;
+            left: 0;
+            background: var(--primary);
+            transition: width 0.35s ease;
+        }
+        .nav-links a:hover::after,
+        .nav-links a.active::after { width: 100%; }
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--primary); }
+
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 5%;
+        }
+        .hero-content {
+            background: var(--glass);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 28px;
+            padding: 5rem 4.5rem;
+            max-width: 980px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 12px 40px rgba(56, 189, 248, 0.25);
+        }
+        h1 {
+            font-size: 4.2rem;
+            margin-bottom: 1.2rem;
+            color: #0284c7;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .subtitle {
+            font-size: 1.55rem;
+            margin: 1.8rem 0 2.8rem;
+            color: #334155;
+            opacity: 0.95;
+        }
+        .btn {
+            background: linear-gradient(45deg, #0ea5e9, #38bdf8);
+            color: white;
+            padding: 1.2rem 3.2rem;
+            border: none;
+            border-radius: 999px;
+            font-size: 1.35rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.4s ease;
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.35);
+        }
+        .btn:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(14, 165, 233, 0.5);
+        }
+        footer {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            padding: 1.8rem;
+            color: #475569;
+            border-top: 1px solid rgba(56, 189, 248, 0.25);
+            margin-top: 4rem;
+            font-weight: 500;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-16px); }
+        }
+        .animate-float { animation: float 7s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav>
+        <div class="logo">Underwater Image AI</div>
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}" class="active">Home</a>
+            <a href="{{ url_for('about') }}">About</a>
+            <a href="{{ url_for('register') }}">Register</a>
+            <a href="{{ url_for('login') }}">Login</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content animate-float">
+            <h1>Adaptive Quality-Aware<br>Underwater Image Enhancement</h1>
+            <p class="subtitle">
+                Deep learning classification of degradation types • Multi-scale fusion • Real-time analysis<br>
+                Designed for marine research, underwater robotics & environmental monitoring
+            </p>
+            <a href="{{ url_for('login') }}" class="btn">Get Started →</a>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 TECH • Nellore, Andhra Pradesh • All Rights Reserved</p>
+    </footer>
+
+    <script>
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 50, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#38bdf8" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.6, "random": true },
+                "size": { "value": 3.8, "random": true },
+                "line_linked": { "enable": true, "distance": 170, "color": "#7dd3fc", "opacity": 0.5, "width": 1.3 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                "modes": { "grab": { "distance": 150, "line_linked": { "opacity": 0.75 } }, "push": { "particles_nb": 4 } }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+</html>

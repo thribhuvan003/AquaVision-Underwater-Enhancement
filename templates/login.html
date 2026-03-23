@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Underwater Image AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --primary-dark: #0ea5e9;
+            --text: #0f172a;
+            --glass: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(56, 189, 248, 0.35);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--text);
+            background: url('https://images.unsplash.com/photo-1495012379376-194a416fcc5f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fHVuZGVyd2F0ZXJ8ZW58MHx8MHx8fDA%3D') center/cover no-repeat fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(224, 247, 255, 0.85), rgba(186, 230, 253, 0.75));
+            z-index: -2;
+        }
+        #particles-js {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        nav {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            padding: 1rem 5%;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .logo { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        .nav-links a {
+            color: #0f172a;
+            text-decoration: none;
+            margin: 0 1.4rem;
+            font-weight: 600;
+            position: relative;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2.5px;
+            bottom: -5px;
+            left: 0;
+            background: var(--primary);
+            transition: width 0.35s ease;
+        }
+        .nav-links a:hover::after,
+        .nav-links a.active::after { width: 100%; }
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--primary); }
+
+        .container {
+            min-height: calc(100vh - 80px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 120px 20px 60px;
+        }
+        .form-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 3.5rem 3rem;
+            width: 100%;
+            max-width: 480px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 12px 40px rgba(56, 189, 248, 0.25);
+        }
+        h2 {
+            color: #0284c7;
+            text-align: center;
+            margin-bottom: 2.2rem;
+            font-size: 2.4rem;
+            font-weight: 700;
+        }
+        input {
+            width: 100%;
+            padding: 1.1rem;
+            margin: 0.9rem 0;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.5);
+            color: #0f172a;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(56,189,248,0.4);
+            background: white;
+        }
+        input::placeholder { color: #64748b; }
+        .btn {
+            width: 100%;
+            background: linear-gradient(45deg, #0ea5e9, #38bdf8);
+            color: white;
+            padding: 1.2rem;
+            border: none;
+            border-radius: 999px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            transition: all 0.4s;
+            box-shadow: 0 8px 25px rgba(14,165,233,0.35);
+        }
+        .btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 40px rgba(14,165,233,0.5);
+        }
+        .message {
+            text-align: center;
+            margin: 1rem 0;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #dc2626;
+        }
+        .link {
+            text-align: center;
+            margin-top: 1.8rem;
+            color: #475569;
+            font-size: 1.1rem;
+        }
+        .link a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        footer {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            padding: 1.8rem;
+            color: #475569;
+            border-top: 1px solid rgba(56, 189, 248, 0.25);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav>
+        <div class="logo">Underwater Image AI</div>
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('about') }}">About</a>
+            <a href="{{ url_for('register') }}">Register</a>
+            <a href="{{ url_for('login') }}" class="active">Login</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-card">
+            <h2>Sign In</h2>
+
+            {% if message %}
+                <p class="message">{{ message }}</p>
+            {% endif %}
+
+            <form method="POST">
+                <input type="email" name="email" placeholder="Email Address" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit" class="btn">Login</button>
+            </form>
+
+            <div class="link">
+                Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 TECH • Nellore, Andhra Pradesh • All Rights Reserved</p>
+    </footer>
+
+    <script>
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 50, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#38bdf8" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.6, "random": true },
+                "size": { "value": 3.8, "random": true },
+                "line_linked": { "enable": true, "distance": 170, "color": "#7dd3fc", "opacity": 0.5, "width": 1.3 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                "modes": { "grab": { "distance": 150, "line_linked": { "opacity": 0.75 } }, "push": { "particles_nb": 4 } }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+</html>

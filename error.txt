@@ -1,0 +1,38 @@
+Traceback (most recent call last):
+  File "C:\Users\ntena\Downloads\TK206833 -Arjun-Adaptive Qualityaware underwater image enhancement using multiscale fusion\TK206833 -Adaptive Qualityaware underwater image enhancement using multiscale fusion\CODE\Backend\Front end\temp_test2.py", line 11, in <module>
+    response = client.post('/prediction', data={'file': (f, 'test_blue.jpg')})
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\werkzeug\test.py", line 1167, in post
+    return self.open(*args, **kw)
+           ~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\testing.py", line 235, in open
+    response = super().open(
+        request,
+        buffered=buffered,
+        follow_redirects=follow_redirects,
+    )
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\werkzeug\test.py", line 1116, in open
+    response_parts = self.run_wsgi_app(request.environ, buffered=buffered)
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\werkzeug\test.py", line 988, in run_wsgi_app
+    rv = run_wsgi_app(self.application, environ, buffered=buffered)
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\werkzeug\test.py", line 1264, in run_wsgi_app
+    app_rv = app(environ, start_response)
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\app.py", line 1536, in __call__
+    return self.wsgi_app(environ, start_response)
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\app.py", line 1514, in wsgi_app
+    response = self.handle_exception(e)
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\ntena\Downloads\TK206833 -Arjun-Adaptive Qualityaware underwater image enhancement using multiscale fusion\TK206833 -Adaptive Qualityaware underwater image enhancement using multiscale fusion\CODE\Backend\Front end\app.py", line 610, in prediction
+    file.save(image_path)
+    ~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\ntena\AppData\Roaming\Python\Python313\site-packages\werkzeug\datastructures\file_storage.py", line 129, in save
+    dst = open(dst, "wb")
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\ntena\\Downloads\\TK206833 -Arjun-Adaptive Qualityaware underwater image enhancement using multiscale fusion\\TK206833 -Adaptive Qualityaware underwater image enhancement using multiscale fusion\\CODE\\Backend\\Front end\\static\\uploads\\833bf525-422c-4b48-af3a-b9a7c1e69764.jpg'

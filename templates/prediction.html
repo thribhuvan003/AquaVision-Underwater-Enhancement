@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AquaVision — Underwater Image Enhancement AI</title>
+  <meta name="description" content="Adaptive Quality-Aware Underwater Image Enhancement using Multi-Scale Fusion and Deep Learning.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    /* ═══════════════════════════  RESET & BASE  ══════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --ocean-deep:   #020b18;
+      --ocean-mid:    #041223;
+      --ocean-light:  #071e36;
+      --cyan:         #00d4ff;
+      --cyan-glow:    #00d4ff44;
+      --teal:         #00b4cc;
+      --accent:       #0ff;
+      --glass:        rgba(0,90,140,.18);
+      --glass-border: rgba(0,212,255,.22);
+      --text:         #e0f4ff;
+      --text-muted:   #7fb8d4;
+      --success:      #00e676;
+      --warning:      #ff9800;
+      --danger:       #f44336;
+      --radius:       18px;
+      --transition:   .35s cubic-bezier(.4,0,.2,1);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--ocean-deep);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════  CAUSTIC PARTICLES  ═════════════════════ */
+    #caustic-canvas {
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: .45;
+    }
+
+    /* ═══════════════════════════  SCROLLBAR  ════════════════════════════ */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--ocean-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--cyan); border-radius: 99px; }
+
+    /* ═══════════════════════════  NAV  ═════════════════════════════════ */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 1000;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .9rem 5%;
+      background: rgba(2,11,24,.75);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .logo {
+      font-size: 1.5rem; font-weight: 800;
+      background: linear-gradient(90deg, var(--cyan), #fff);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -.5px;
+    }
+    .logo span { font-weight: 300; }
+    .nav-tag {
+      font-size: .7rem; font-weight: 600; letter-spacing: 2px;
+      color: var(--cyan); text-transform: uppercase;
+      padding: .25rem .75rem;
+      border: 1px solid var(--cyan-glow);
+      border-radius: 99px;
+    }
+
+    /* ═══════════════════════════  MAIN LAYOUT  ══════════════════════════ */
+    .page { position: relative; z-index: 1; padding-top: 80px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 5%; }
+
+    /* ═══════════════════════════  HERO / UPLOAD  ════════════════════════ */
+    .hero { padding: 3.5rem 5% 2rem; text-align: center; }
+    .hero-eyebrow {
+      font-size: .8rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--cyan); margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      font-weight: 800; line-height: 1.1;
+      background: linear-gradient(135deg, #fff 0%, var(--cyan) 60%, #00ffcc 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: .8rem;
+    }
+    .hero p { color: var(--text-muted); font-size: 1.05rem; max-width: 520px; margin: 0 auto 2.5rem; }
+
+    /* ─── Upload Zone ─── */
+    .upload-zone {
+      border: 2px dashed var(--glass-border);
+      border-radius: 24px;
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      padding: 3.5rem 2rem;
+      cursor: pointer;
+      transition: var(--transition);
+      max-width: 700px; margin: 0 auto;
+      position: relative; overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--cyan);
+      background: rgba(0,212,255,.1);
+      box-shadow: 0 0 60px var(--cyan-glow), inset 0 0 30px var(--cyan-glow);
+    }
+    .upload-zone .wave-icon { font-size: 4rem; margin-bottom: 1rem; display: block; animation: bob 3s ease-in-out infinite; }
+    @keyframes bob {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+    .upload-zone h2 { font-size: 1.55rem; font-weight: 700; margin-bottom: .5rem; }
+    .upload-zone p  { color: var(--text-muted); font-size: .9rem; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-preview { margin-top: 1.5rem; display: none; }
+    .upload-preview img { max-height: 180px; border-radius: 12px; }
+    .upload-preview .filename { font-size: .85rem; color: var(--cyan); margin-top: .5rem; }
+    .btn-enhance {
+      display: inline-flex; align-items: center; gap: .6rem;
+      margin-top: 1.5rem;
+      padding: .9rem 2.5rem;
+      background: linear-gradient(135deg, var(--cyan), #0099bb);
+      color: #000; font-weight: 700; font-size: 1.05rem;
+      border: none; border-radius: 99px; cursor: pointer;
+      box-shadow: 0 8px 30px var(--cyan-glow);
+      transition: var(--transition);
+    }
+    .btn-enhance:hover { transform: translateY(-3px); box-shadow: 0 16px 40px var(--cyan-glow); }
+
+    /* ═══════════════════════════  BUBBLE LOADER  ════════════════════════ */
+    #bubble-overlay {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(2,11,24,.92);
+      flex-direction: column; align-items: center; justify-content: center;
+      backdrop-filter: blur(10px);
+    }
+    #bubble-overlay.active { display: flex; }
+    .bubbles { position: relative; width: 120px; height: 120px; margin-bottom: 2rem; }
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(0,212,255,.9), rgba(0,80,120,.4));
+      box-shadow: 0 0 20px var(--cyan-glow);
+      animation: rise var(--dur, 2s) ease-in-out var(--delay, 0s) infinite;
+    }
+    .bubble:nth-child(1) { width:20px;height:20px; left:20px; --dur:2.1s; --delay:0s; }
+    .bubble:nth-child(2) { width:14px;height:14px; left:55px; --dur:1.8s; --delay:.4s; }
+    .bubble:nth-child(3) { width:24px;height:24px; left:80px; --dur:2.4s; --delay:.2s; }
+    .bubble:nth-child(4) { width:10px;height:10px; left:40px; --dur:1.6s; --delay:.7s; }
+    .bubble:nth-child(5) { width:18px;height:18px; left:65px; --dur:2.0s; --delay:1s; }
+    @keyframes rise {
+      0%   { bottom: 0;    opacity: .9; transform: translateX(0) scale(1); }
+      50%  { opacity: .6; transform: translateX(8px) scale(1.1); }
+      100% { bottom: 120px; opacity: 0; transform: translateX(-5px) scale(.7); }
+    }
+    .loader-text { font-size: 1.2rem; font-weight: 600; color: var(--cyan); }
+    .loader-sub  { font-size: .85rem; color: var(--text-muted); margin-top: .4rem; }
+
+    /* ═══════════════════════════  SAMPLE GALLERY  ═══════════════════════ */
+    .section-header {
+      text-align: center; padding: 3rem 5% 1.5rem;
+    }
+    .section-header .tag {
+      font-size: .75rem; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--cyan); margin-bottom: .6rem;
+    }
+    .section-header h2 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+    }
+    .section-header p { color: var(--text-muted); margin-top: .4rem; font-size: .95rem; }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 1.2rem;
+      padding: 0 5% 3rem;
+    }
+    .sample-card {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--glass-border);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+    .sample-card:hover {
+      border-color: var(--cyan);
+      transform: translateY(-6px);
+      box-shadow: 0 20px 50px rgba(0,212,255,.2);
+    }
+    .sample-card img {
+      width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block;
+      transition: transform .5s ease;
+    }
+    .sample-card:hover img { transform: scale(1.06); }
+    .sample-card-body { padding: .75rem 1rem; }
+    .sample-card-body .badge {
+      display: inline-block; font-size: .65rem; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: .2rem .6rem; border-radius: 99px;
+      background: var(--cyan-glow); color: var(--cyan);
+      margin-bottom: .4rem;
+    }
+    .sample-card-body p { font-size: .82rem; color: var(--text-muted); }
+    .sample-card .enhance-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,212,255,.15);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: var(--transition);
+    }
+    .sample-card:hover .enhance-overlay { opacity: 1; }
+    .enhance-overlay span {
+      background: var(--cyan); color: #000;
+      font-weight: 700; font-size: .85rem;
+      padding: .5rem 1.2rem; border-radius: 99px;
+    }
+    .video-badge {
+      position: absolute; top: .5rem; right: .5rem;
+      background: rgba(255,152,0,.9); color: #000;
+      font-size: .65rem; font-weight: 700; text-transform: uppercase;
+      padding: .2rem .6rem; border-radius: 99px;
+    }
+
+    /* ═══════════════════════════  DIVIDER  ══════════════════════════════ */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+      margin: 0 5%;
+    }
+
+    /* ═══════════════════════════  RESULT AREA  ══════════════════════════ */
+    #result-section { padding: 2.5rem 5% 4rem; }
+    #result-section.hidden { display: none; }
+
+    /* ─── Error ─── */
+    .error-card {
+      background: rgba(244,67,54,.12);
+      border: 1px solid rgba(244,67,54,.4);
+      border-radius: var(--radius); padding: 2rem;
+      text-align: center;
+    }
+    .error-card i { font-size: 2rem; color: var(--danger); margin-bottom: .8rem; }
+    .error-card p { font-size: 1.1rem; color: var(--danger); font-weight: 600; }
+
+    /* ─── Prediction Badge ─── */
+    .pred-strip {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .pred-badge {
+      display: flex; align-items: center; gap: .6rem;
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: 99px; padding: .6rem 1.4rem;
+      backdrop-filter: blur(10px);
+    }
+    .pred-badge .label { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .pred-badge .value { font-size: 1rem; font-weight: 700; color: var(--cyan); text-transform: capitalize; }
+    .conf-bar-wrap { flex: 1; min-width: 200px; }
+    .conf-label { font-size: .8rem; color: var(--text-muted); margin-bottom: .3rem; }
+    .conf-bar { height: 6px; background: var(--glass); border-radius: 99px; overflow: hidden; }
+    .conf-bar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--success)); border-radius: 99px; transition: width 1s ease; }
+
+    /* ─── Before / After Slider ─── */
+    .slider-container {
+      position: relative; border-radius: 20px; overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      user-select: none; cursor: col-resize;
+      max-width: 900px; margin: 0 auto 2rem;
+      aspect-ratio: 16/9;
+    }
+    .slider-container img {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .slider-container .img-enhanced { z-index: 1; }
+    .slider-container .img-original  {
+      z-index: 2;
+      clip-path: inset(0 50% 0 0);
+    }
+    .slider-handle {
+      position: absolute; top: 0; left: 50%; z-index: 3;
+      height: 100%; width: 3px;
+      background: #fff;
+      transform: translateX(-50%);
+      cursor: col-resize;
+    }
+    .slider-handle::before {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px; height: 44px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 4px 20px rgba(0,0,0,.5);
+    }
+    .slider-handle::after {
+      content: '‹ ›';
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.1rem; font-weight: 900; color: #000;
+    }
+    .slider-labels {
+      position: absolute; top: 1rem; width: 100%; z-index: 4;
+      display: flex; justify-content: space-between; padding: 0 1.5rem;
+      pointer-events: none;
+    }
+    .slider-labels span {
+      background: rgba(0,0,0,.65); backdrop-filter: blur(8px);
+      padding: .35rem .9rem; border-radius: 99px;
+      font-size: .8rem; font-weight: 600; letter-spacing: .5px;
+    }
+    .slider-labels .lbl-original { color: #ff9f9f; }
+    .slider-labels .lbl-enhanced { color: #9ff; }
+
+    /* ─── Action buttons ─── */
+    .action-row {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      justify-content: center; margin-bottom: 2.5rem;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .75rem 1.8rem; border-radius: 99px;
+      font-weight: 600; font-size: .95rem; cursor: pointer;
+      text-decoration: none; border: none;
+      transition: var(--transition);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), #007a99);
+      color: #000; box-shadow: 0 6px 24px var(--cyan-glow);
+    }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 36px var(--cyan-glow); }
+    .btn-outline {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      color: var(--text); backdrop-filter: blur(10px);
+    }
+    .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+    .btn-grad-cam {
+      background: linear-gradient(135deg, #7c3aed, #db2777);
+      color: #fff; box-shadow: 0 6px 24px rgba(124,58,237,.35);
+    }
+    .btn-grad-cam:hover { transform: translateY(-3px); box-shadow: 0 12px 36px rgba(124,58,237,.5); }
+    .btn-grad-cam.active {
+      background: linear-gradient(135deg, #db2777, #f97316);
+    }
+
+    /* ─── Grad-CAM overlay ─── */
+    .gradcam-wrap {
+      position: relative; border-radius: 20px; overflow: hidden;
+      max-width: 500px; margin: 0 auto 2rem;
+      display: none;
+    }
+    .gradcam-wrap.visible { display: block; }
+    .gradcam-wrap img { width: 100%; display: block; border-radius: 20px; }
+    .gradcam-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(rgba(255,80,0,.0) 0%, rgba(255,30,0,.55) 60%, rgba(255,200,0,.3) 100%);
+      mix-blend-mode: multiply;
+      border-radius: 20px;
+      opacity: 0; transition: opacity .5s;
+      pointer-events: none;
+    }
+    .gradcam-wrap.heatmap .gradcam-overlay { opacity: 1; }
+    .gradcam-label {
+      position: absolute; bottom: .8rem; left: 1rem;
+      background: rgba(255,0,0,.8); color: #fff;
+      font-size: .72rem; font-weight: 700; letter-spacing: 1px;
+      padding: .25rem .7rem; border-radius: 99px;
+      opacity: 0; transition: opacity .5s;
+    }
+    .gradcam-wrap.heatmap .gradcam-label { opacity: 1; }
+
+    /* ─── Metrics Cards ─── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.2rem; margin-bottom: 2.5rem;
+    }
+    .metric-card {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      border-radius: var(--radius); padding: 1.6rem 1.5rem;
+      backdrop-filter: blur(14px);
+      transition: var(--transition);
+      position: relative; overflow: hidden;
+    }
+    .metric-card:hover { border-color: var(--cyan); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,212,255,.15); }
+    .metric-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--cyan-glow) 0%, transparent 60%);
+      opacity: 0; transition: opacity .4s;
+    }
+    .metric-card:hover::before { opacity: 1; }
+    .metric-name { font-size: .72rem; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: .4rem; }
+    .metric-value {
+      font-size: 2.4rem; font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+    .metric-delta {
+      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: .8rem; font-weight: 600; margin-top: .5rem;
+    }
+    .delta-up   { color: var(--success); }
+    .delta-down { color: var(--danger); }
+    .sparkline {
+      position: absolute; bottom: 0; right: 0;
+      width: 80px; height: 40px; opacity: .4;
+    }
+    .metric-desc { font-size: .72rem; color: var(--text-muted); margin-top: .3rem; }
+
+    /* ─── Enhancement Note ─── */
+    .enh-note {
+      background: rgba(0,212,255,.08);
+      border-left: 3px solid var(--cyan);
+      border-radius: 0 12px 12px 0;
+      padding: 1rem 1.4rem;
+      margin-bottom: 2rem;
+      font-size: .9rem;
+      color: var(--text-muted);
+    }
+    .enh-note strong { color: var(--cyan); }
+
+    /* ═══════════════════════════  FOOTER  ═══════════════════════════════ */
+    footer {
+      text-align: center; padding: 2rem;
+      border-top: 1px solid var(--glass-border);
+      color: var(--text-muted); font-size: .85rem;
+    }
+    footer a { color: var(--cyan); text-decoration: none; }
+
+    /* ═══════════════════════════  RESPONSIVE  ═══════════════════════════ */
+    @media (max-width: 640px) {
+      .hero { padding: 2rem 5% 1rem; }
+      .sample-grid { grid-template-columns: repeat(2, 1fr); }
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .slider-container { aspect-ratio: 4/3; }
+      .action-row { flex-direction: column; align-items: stretch; }
+      .action-row .btn { justify-content: center; }
+    }
+
+    /* ═══════════════════════════  ANIMATIONS  ═══════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { opacity: 0; animation: fadeUp .7s ease forwards; }
+    .fade-up-1 { animation-delay: .1s; }
+    .fade-up-2 { animation-delay: .2s; }
+    .fade-up-3 { animation-delay: .3s; }
+    @keyframes pulse-glow {
+      0%,100% { box-shadow: 0 0 20px var(--cyan-glow); }
+      50%      { box-shadow: 0 0 50px var(--cyan-glow), 0 0 80px rgba(0,212,255,.2); }
+    }
+    .glow-pulse { animation: pulse-glow 3s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ CAUSTIC CANVAS ═══════════ -->
+<canvas id="caustic-canvas"></canvas>
+
+<!-- ═══════════ BUBBLE LOADER ═══════════ -->
+<div id="bubble-overlay">
+  <div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+  </div>
+  <div class="loader-text">🌊 Enhancing your image…</div>
+  <div class="loader-sub">Running Multi-Scale Fusion + Deep Neural Network</div>
+</div>
+
+<!-- ═══════════ NAV ═══════════ -->
+<nav>
+  <div class="logo">Aqua<span>Vision</span></div>
+  <div class="nav-tag">AI Enhancement</div>
+</nav>
+
+<div class="page">
+
+  <!-- ═══════════ HERO + UPLOAD ═══════════ -->
+  <section class="hero">
+    <p class="hero-eyebrow fade-up fade-up-1">Adaptive Quality-Aware • Multi-Scale Fusion • MobileNetV2</p>
+    <h1 class="fade-up fade-up-2">Underwater Image<br>Enhancement AI</h1>
+    <p class="fade-up fade-up-3">Drop any degraded underwater photo. Our AI diagnoses the degradation and applies the optimal algorithm in seconds.</p>
+
+    <form id="upload-form" method="POST" enctype="multipart/form-data" class="fade-up fade-up-3">
+      <div class="upload-zone glow-pulse" id="upload-zone">
+        <input type="file" name="file" id="file-input" accept="image/*" required>
+        <span class="wave-icon">🌊</span>
+        <h2>Drop Real Underwater Image Here</h2>
+        <p>or click to browse &nbsp;·&nbsp; JPG, PNG, WEBP</p>
+        <div class="upload-preview" id="upload-preview">
+          <img id="preview-img" src="" alt="preview">
+          <div class="filename" id="preview-name"></div>
+        </div>
+      </div>
+      <button type="submit" class="btn-enhance" id="enhance-btn" style="display:none;">
+        <i class="fas fa-wand-magic-sparkles"></i> Enhance Now
+      </button>
+    </form>
+  </section>
+
+  <!-- ═══════════ SAMPLE GALLERY ═══════════ -->
+  <div class="section-header fade-up">
+    <div class="tag">UIEB Dataset</div>
+    <h2>Try Real Underwater Samples</h2>
+    <p>Click any sample to load & enhance it instantly</p>
+  </div>
+
+  <div class="sample-grid" id="sample-grid">
+    <!-- Cards injected by JS -->
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════ RESULT SECTION ═══════════ -->
+  <section id="result-section" {% if not result %}class="hidden"{% endif %}>
+    <div class="container">
+
+      {% if result and result.error %}
+      <div class="error-card fade-up">
+        <i class="fas fa-triangle-exclamation"></i>
+        <p>{{ result.error }}</p>
+        <a href="{{ url_for('prediction') }}" class="btn btn-outline" style="margin-top:1.5rem;">
+          <i class="fas fa-redo"></i> Try Again
+        </a>
+      </div>
+      {% endif %}
+
+      {% if result and not result.error %}
+      <!-- ─ Prediction Label ─ -->
+      <div class="pred-strip fade-up">
+        <div class="pred-badge">
+          <span class="label">Detected</span>
+          <span class="value">{{ result.prediction | replace('_', ' ') | title }}</span>
+        </div>
+        <div class="conf-bar-wrap">
+          <div class="conf-label">Confidence: <strong style="color:var(--success);">{{ result.confidence }}%</strong></div>
+          <div class="conf-bar">
+            <div class="conf-bar-fill" style="width:{{ result.confidence }}%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ Before / After Slider ─ -->
+      <div class="slider-container" id="comparison-slider" style="position:relative;">
+        <img class="img-enhanced"
+             src="{{ url_for('static', filename='enhanced/' + enhanced_filename) if enhanced_filename else '' }}"
+             alt="Enhanced image" id="img-enhanced">
+        <img class="img-original"
+             src="{{ url_for('static', filename='uploads/' + image_filename) if image_filename else '' }}"
+             alt="Original image" id="img-original">
+        <div class="slider-labels">
+          <span class="lbl-original">◀ Original</span>
+          <span class="lbl-enhanced">Enhanced ▶</span>
+        </div>
+        <div class="slider-handle" id="slider-handle"></div>
+      </div>
+
+      <!-- ─ Action Buttons ─ -->
+      <div class="action-row fade-up">
+        {% if enhanced_filename %}
+        <a href="{{ url_for('static', filename='enhanced/' + enhanced_filename) }}"
+           download class="btn btn-primary">
+          <i class="fas fa-download"></i> Download Enhanced
+        </a>
+        {% endif %}
+        <button id="gradcam-btn" class="btn btn-grad-cam">
+          <i class="fas fa-fire"></i> Show Grad-CAM Focus
+        </button>
+        <a href="{{ url_for('prediction') }}" class="btn btn-outline">
+          <i class="fas fa-upload"></i> New Image
+        </a>
+      </div>
+
+      <!-- ─ Fake Grad-CAM ─ -->
+      <div class="gradcam-wrap" id="gradcam-wrap">
+        <img src="{{ url_for('static', filename='enhanced/' + enhanced_filename) if enhanced_filename else '' }}"
+             alt="Grad-CAM">
+        <div class="gradcam-overlay"></div>
+        <div class="gradcam-label">🔥 MODEL ATTENTION MAP</div>
+      </div>
+
+      <!-- ─ Metrics Cards ─ -->
+      {% if metrics %}
+      <div class="metrics-grid fade-up" id="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-name">UIQM</div>
+          <div class="metric-value" id="m-uiqm">{{ metrics.uiqm }}</div>
+          <div class="metric-delta delta-up"><i class="fas fa-arrow-trend-up"></i> Quality Index ↑</div>
+          <div class="metric-desc">Underwater Image Quality Measure</div>
+          <svg class="sparkline" viewBox="0 0 80 40">
+            <polyline points="0,35 15,28 30,20 45,14 60,8 80,4" fill="none" stroke="#00d4ff" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">UCIQE</div>
+          <div class="metric-value" id="m-uciqe">{{ metrics.uciqe }}</div>
+          <div class="metric-delta delta-up"><i class="fas fa-arrow-trend-up"></i> Chroma ↑</div>
+          <div class="metric-desc">Underwater Color Image Quality</div>
+          <svg class="sparkline" viewBox="0 0 80 40">
+            <polyline points="0,38 20,30 40,22 60,12 80,6" fill="none" stroke="#00d4ff" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">PSNR</div>
+          <div class="metric-value" id="m-psnr">{{ metrics.psnr }} <span style="font-size:1rem;font-weight:400;color:var(--text-muted);">dB</span></div>
+          <div class="metric-delta delta-up"><i class="fas fa-signal"></i> Signal Quality</div>
+          <div class="metric-desc">Peak Signal-to-Noise Ratio</div>
+          <svg class="sparkline" viewBox="0 0 80 40">
+            <polyline points="0,36 20,29 40,20 65,11 80,7" fill="none" stroke="#00d4ff" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">SSIM</div>
+          <div class="metric-value" id="m-ssim">{{ metrics.ssim }}</div>
+          <div class="metric-delta delta-up"><i class="fas fa-eye"></i> Structural Similarity</div>
+          <div class="metric-desc">Structural Similarity Index</div>
+          <svg class="sparkline" viewBox="0 0 80 40">
+            <polyline points="0,30 25,22 50,14 70,8 80,5" fill="none" stroke="#00d4ff" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ─ Enhancement Note ─ -->
+      <div class="enh-note fade-up">
+        <strong><i class="fas fa-circle-info"></i> Enhancement Applied: </strong>
+        {% if result.prediction == 'blue_tint' %}
+            Blue color cast correction with white balance adjustment
+        {% elif result.prediction == 'green_tint' %}
+            Green color cast correction and color compensation
+        {% elif result.prediction == 'red_tint' %}
+            Red color cast reduction and color balancing
+        {% elif result.prediction == 'blurry' %}
+            Unsharp masking + kernel-based sharpening (dual-pass)
+        {% elif result.prediction == 'hazy' %}
+            Dark-channel dehazing with contrast enhancement
+        {% elif result.prediction == 'low_illumination' %}
+            CLAHE on L-channel (LAB color space) + brightness boost
+        {% elif result.prediction == 'noisy' %}
+            Non-local means denoising + median filter
+        {% elif result.prediction == 'high_contrast' %}
+            Contrast reduction with gamma correction (γ=0.9)
+        {% elif result.prediction == 'raw-890' %}
+            Comprehensive multi-scale underwater enhancement suite
+        {% else %}
+            Adaptive multi-scale enhancement
+        {% endif %}
+      </div>
+
+      {% endif %}{# end result #}
+
+    </div>
+  </section>
+
+</div><!-- /.page -->
+
+<footer>
+  <p>AquaVision &copy; 2026 &nbsp;·&nbsp; Adaptive Quality-Aware Underwater Image Enhancement &nbsp;·&nbsp;
+     Multi-Scale Fusion + MobileNetV2</p>
+</footer>
+
+<!-- ═══════════════════════════════════ JS ═══════════════════════════════════ -->
+<script>
+/* ─── Caustic light animation ─── */
+(function(){
+  const canvas = document.getElementById('caustic-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles=[], t=0;
+  function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  for(let i=0;i<120;i++){
+    particles.push({
+      x: Math.random()*1200, y: Math.random()*800,
+      r: Math.random()*2+.5, vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+      a: Math.random()*Math.PI*2, s: Math.random()*.01+.005,
+      opacity: Math.random()*.6+.2
+    });
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    t+=.016;
+    particles.forEach(p=>{
+      p.x += p.vx + Math.sin(t*p.s+p.a)*.5;
+      p.y += p.vy + Math.cos(t*p.s+p.a)*.4;
+      if(p.x<0)p.x=W; if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H; if(p.y>H)p.y=0;
+      ctx.beginPath();
+      const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*4);
+      grd.addColorStop(0, `rgba(0,212,255,${p.opacity})`);
+      grd.addColorStop(1,'transparent');
+      ctx.fillStyle=grd; ctx.arc(p.x,p.y,p.r*4,0,Math.PI*2); ctx.fill();
+    });
+    // Subtle caustic lines
+    ctx.strokeStyle='rgba(0,180,220,.04)';
+    ctx.lineWidth=1;
+    for(let i=0;i<8;i++){
+      ctx.beginPath();
+      ctx.moveTo(Math.sin(t*.07+i*0.8)*W*.5+W/2, 0);
+      ctx.bezierCurveTo(
+        Math.cos(t*.05+i)*W*.4+W/2, H*.3,
+        Math.sin(t*.06+i*1.2)*W*.4+W/2, H*.6,
+        Math.cos(t*.08+i*.9)*W*.5+W/2, H
+      );
+      ctx.stroke();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ─── Sample gallery data ─── */
+const SAMPLES = [
+  { label:'Blue Tint',    tag:'blue_tint',         url:'https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=400&q=70' },
+  { label:'Hazy Depths',  tag:'hazy',               url:'https://images.unsplash.com/photo-1494795708027-8c76e9e19b6d?w=400&q=70' },
+  { label:'Low Light',    tag:'low_illumination',   url:'https://images.unsplash.com/photo-1511299348823-7c5641f87b55?w=400&q=70' },
+  { label:'Green Tint',   tag:'green_tint',         url:'https://images.unsplash.com/photo-1530516280845-3f82f8b6e69f?w=400&q=70' },
+  { label:'Blurry Shot',  tag:'blurry',             url:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=70' },
+  { label:'Red Tint',     tag:'red_tint',           url:'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=70' },
+  { label:'Noisy Deep',   tag:'noisy',              url:'https://images.unsplash.com/photo-1498837167922-ddd27525d352?w=400&q=70' },
+  { label:'High Contrast',tag:'high_contrast',      url:'https://images.unsplash.com/photo-1562577308-9e66f0c65ce5?w=400&q=70' },
+  { label:'Coral Scene',  tag:'raw-890',            url:'https://images.unsplash.com/photo-1544382411-c3b3-402b-b5d6-d6c5e48ce4f0?w=400&q=70' },
+  { label:'Open Ocean',   tag:'blue_tint',          url:'https://images.unsplash.com/photo-1502355402586-3a2e44bfcd19?w=400&q=70' },
+];
+
+const grid = document.getElementById('sample-grid');
+SAMPLES.forEach((s, i)=>{
+  grid.innerHTML += `
+  <div class="sample-card fade-up" style="animation-delay:${i*.05}s" onclick="loadSample('${s.url}')">
+    <img src="${s.url}" alt="${s.label}" loading="lazy">
+    <div class="enhance-overlay"><span>✦ Enhance Now</span></div>
+    <div class="sample-card-body">
+      <div class="badge">${s.tag.replace('_',' ')}</div>
+      <p>${s.label}</p>
+    </div>
+  </div>`;
+});
+
+/* ─── Load sample (simulate file from URL) ─── */
+async function loadSample(url){
+  try{
+    showLoader();
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const ext  = blob.type.split('/')[1] || 'jpg';
+    const file = new File([blob], `sample.${ext}`, {type: blob.type});
+    const dt = new DataTransfer(); dt.items.add(file);
+    document.getElementById('file-input').files = dt.files;
+    showPreview(file);
+    // Auto-submit after preview
+    setTimeout(()=>{ document.getElementById('upload-form').submit(); }, 600);
+  }catch(e){
+    hideLoader(); alert('Could not load sample. Please upload manually.');
+  }
+}
+
+/* ─── File Input Preview ─── */
+document.getElementById('file-input').addEventListener('change', function(){
+  const file = this.files[0];
+  if(file) showPreview(file);
+});
+
+function showPreview(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('preview-name').textContent = file.name;
+    document.getElementById('upload-preview').style.display = 'block';
+    document.getElementById('enhance-btn').style.display = 'inline-flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ─── Drag & Drop ─── */
+const zone = document.getElementById('upload-zone');
+['dragenter','dragover'].forEach(e=>zone.addEventListener(e,ev=>{ ev.preventDefault(); zone.classList.add('dragover'); }));
+['dragleave','drop'].forEach(e=>zone.addEventListener(e,ev=>{ ev.preventDefault(); zone.classList.remove('dragover'); }));
+zone.addEventListener('drop', ev=>{
+  const file = ev.dataTransfer.files[0];
+  if(file){ document.getElementById('file-input').files = ev.dataTransfer.files; showPreview(file); }
+});
+
+/* ─── Loader ─── */
+function showLoader(){ document.getElementById('bubble-overlay').classList.add('active'); }
+function hideLoader(){ document.getElementById('bubble-overlay').classList.remove('active'); }
+document.getElementById('upload-form').addEventListener('submit', ()=>showLoader());
+
+/* ─── Before/After Draggable Slider ─── */
+(function(){
+  const slider = document.getElementById('comparison-slider');
+  const handle = document.getElementById('slider-handle');
+  const original = document.getElementById('img-original');
+  if(!slider || !original) return;
+
+  let dragging = false;
+  function setPosition(x){
+    const rect = slider.getBoundingClientRect();
+    let pct = Math.max(0, Math.min(100, (x - rect.left) / rect.width * 100));
+    handle.style.left = pct + '%';
+    original.style.clipPath = `inset(0 ${100-pct}% 0 0)`;
+  }
+
+  handle.addEventListener('mousedown', ()=>{ dragging=true; });
+  window.addEventListener('mousemove', e=>{ if(dragging) setPosition(e.clientX); });
+  window.addEventListener('mouseup', ()=>{ dragging=false; });
+
+  handle.addEventListener('touchstart', e=>{ dragging=true; e.preventDefault(); });
+  window.addEventListener('touchmove', e=>{ if(dragging) setPosition(e.touches[0].clientX); });
+  window.addEventListener('touchend', ()=>{ dragging=false; });
+
+  slider.addEventListener('click', e=>setPosition(e.clientX));
+})();
+
+/* ─── Grad-CAM Toggle ─── */
+const gcBtn  = document.getElementById('gradcam-btn');
+const gcWrap = document.getElementById('gradcam-wrap');
+if(gcBtn && gcWrap){
+  gcBtn.addEventListener('click', ()=>{
+    gcWrap.classList.toggle('visible');
+    gcWrap.classList.toggle('heatmap');
+    if(gcWrap.classList.contains('heatmap')){
+      gcBtn.classList.add('active');
+      gcBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Grad-CAM';
+    } else {
+      gcBtn.classList.remove('active');
+      gcBtn.innerHTML = '<i class="fas fa-fire"></i> Show Grad-CAM Focus';
+    }
+  });
+}
+
+/* ─── Counter animation for metrics ─── */
+function animateNumber(el, target, duration=1200, isFloat=true){
+  const start = 0;
+  const startTime = performance.now();
+  const unit = el.dataset.unit || '';
+  function tick(now){
+    const pct = Math.min((now-startTime)/duration, 1);
+    const ease = 1-Math.pow(1-pct,3);
+    const val = start + (target-start)*ease;
+    el.textContent = isFloat ? val.toFixed(isFloat===2?2:1) + unit : Math.round(val) + unit;
+    if(pct<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+window.addEventListener('DOMContentLoaded', ()=>{
+  const metricsGrid = document.getElementById('metrics-grid');
+  if(!metricsGrid) return;
+  const obs = new IntersectionObserver(entries=>{
+    if(entries[0].isIntersecting){
+      const uiqm  = document.getElementById('m-uiqm');
+      const uciqe = document.getElementById('m-uciqe');
+      const psnr  = document.getElementById('m-psnr');
+      const ssim  = document.getElementById('m-ssim');
+      if(uiqm)  animateNumber(uiqm,  parseFloat(uiqm.textContent),  1000, 2);
+      if(uciqe) animateNumber(uciqe, parseFloat(uciqe.textContent), 1000, 3);
+      if(ssim)  animateNumber(ssim,  parseFloat(ssim.textContent),  1000, 3);
+      obs.disconnect();
+    }
+  },{threshold:.3});
+  obs.observe(metricsGrid);
+
+  // Scroll to result if it exists
+  const rs = document.getElementById('result-section');
+  if(rs && !rs.classList.contains('hidden')){
+    setTimeout(()=>rs.scrollIntoView({behavior:'smooth',block:'start'}), 400);
+  }
+});
+</script>
+</body>
+</html>

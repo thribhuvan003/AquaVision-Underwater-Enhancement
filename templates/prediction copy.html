@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyze Image - Underwater Image AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --primary-dark: #0ea5e9;
+            --text: #0f172a;
+            --glass: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(56, 189, 248, 0.35);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--text);
+            background: url('https://images.unsplash.com/photo-1602199926649-2e5e447bab97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MzR8fHVuZGVyd2F0ZXJ8ZW58MHx8MHx8fDA%3D') center/cover no-repeat fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(224, 247, 255, 0.85), rgba(186, 230, 253, 0.75));
+            z-index: -2;
+        }
+        #particles-js {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        nav {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            padding: 1rem 5%;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .logo { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        .nav-links a {
+            color: #0f172a;
+            text-decoration: none;
+            margin: 0 1.4rem;
+            font-weight: 600;
+            position: relative;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2.5px;
+            bottom: -5px;
+            left: 0;
+            background: var(--primary);
+            transition: width 0.35s ease;
+        }
+        .nav-links a:hover::after,
+        .nav-links a.active::after { width: 100%; }
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--primary); }
+
+        .container {
+            max-width: 900px;
+            margin: 120px auto 80px;
+            padding: 0 5%;
+        }
+        .result-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 3.5rem 3rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 12px 40px rgba(56, 189, 248, 0.25);
+            text-align: center;
+        }
+        h2 {
+            color: #0284c7;
+            margin-bottom: 2rem;
+            font-size: 2.6rem;
+            font-weight: 700;
+        }
+        .uploaded-image {
+            max-width: 100%;
+            max-height: 480px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            margin: 2rem 0;
+            object-fit: contain;
+        }
+        .prediction-result {
+            font-size: 3.2rem;
+            font-weight: 800;
+            margin: 1.5rem 0 0.8rem;
+            color: #0284c7;
+            text-transform: capitalize;
+        }
+        .confidence {
+            font-size: 1.6rem;
+            color: #334155;
+            margin-bottom: 2rem;
+        }
+        .confidence strong {
+            color: #059669;
+            font-size: 1.8rem;
+        }
+        .error-message {
+            color: #dc2626;
+            font-size: 1.4rem;
+            margin: 1.5rem 0;
+            font-weight: 600;
+        }
+        .btn {
+            background: linear-gradient(45deg, #0ea5e9, #38bdf8);
+            color: white;
+            padding: 1.1rem 2.8rem;
+            border: none;
+            border-radius: 999px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.4s;
+            box-shadow: 0 8px 25px rgba(14,165,233,0.35);
+        }
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 40px rgba(14,165,233,0.5);
+        }
+        .upload-form {
+            margin-bottom: 3rem;
+        }
+        .upload-form input[type="file"] {
+            display: block;
+            margin: 1.5rem auto;
+            font-size: 1.1rem;
+        }
+        footer {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            padding: 1.8rem;
+            color: #475569;
+            border-top: 1px solid rgba(56, 189, 248, 0.25);
+            font-weight: 500;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.8s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav>
+        <div class="logo">Underwater Image AI</div>
+        <div class="nav-links">
+            <a href="{{ url_for('home') }}">Home</a>
+       
+            <a href="{{ url_for('model') }}">Models</a>
+            <a href="{{ url_for('prediction') }}" class="active">Analyze</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+    <br><br>
+    <div class="container">
+        <div class="result-card">
+            <h2>Image Quality Analysis</h2>
+
+            <!-- Upload form (shown when no result yet or when user wants to try again) -->
+            {% if not result or result.error %}
+            <div class="upload-form">
+                <form method="POST" enctype="multipart/form-data">
+                    <p style="font-size:1.3rem; margin-bottom:1.5rem; color:#334155;">
+                        Upload an underwater image to classify its degradation type
+                    </p>
+                    <input type="file" name="file" accept="image/*" required>
+                    <button type="submit" class="btn">Analyze Image</button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Error message -->
+            {% if result and result.error %}
+                <p class="error-message fade-in">
+                    <i class="fas fa-exclamation-circle"></i> {{ result.error }}
+                </p>
+            {% endif %}
+
+            <!-- Prediction result -->
+            {% if result and not result.error %}
+                <div class="fade-in">
+                    {% if image_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' + image_filename) }}"
+                             alt="Uploaded underwater image"
+                             class="uploaded-image">
+                    {% endif %}
+
+                    <div class="prediction-result">
+                        {{ result.prediction | replace('_', ' ') | title }}
+                    </div>
+
+                    <p class="confidence">
+                        Confidence: <strong>{{ result.confidence }}%</strong>
+                    </p>
+
+                    <!-- Optional: show all probabilities if you want -->
+                    <!--
+                    <div style="margin-top:2rem; font-size:1.1rem; color:#475569;">
+                        <strong>Full breakdown:</strong><br>
+                        {% for cls, prob in result.all_probs.items() %}
+                            {{ cls | replace('_', ' ') | title }}: {{ prob }}%<br>
+                        {% endfor %}
+                    </div>
+                    -->
+
+                    <a href="{{ url_for('prediction') }}" class="btn" style="margin-top:2rem;">
+                        Analyze Another Image
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+
+    <script>
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 50, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#38bdf8" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.6, "random": true },
+                "size": { "value": 3.8, "random": true },
+                "line_linked": { "enable": true, "distance": 170, "color": "#7dd3fc", "opacity": 0.5, "width": 1.3 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                "modes": { "grab": { "distance": 150, "line_linked": { "opacity": 0.75 } }, "push": { "particles_nb": 4 } }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyze & Enhance - Underwater Image AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --primary-dark: #0ea5e9;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --text: #0f172a;
+            --glass: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(56, 189, 248, 0.35);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--text);
+            background: url('https://images.unsplash.com/photo-1602199926649-2e5e447bab97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MzR8fHVuZGVyd2F0ZXJ8ZW58MHx8MHx8fDA%3D') center/cover no-repeat fixed;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(224, 247, 255, 0.85), rgba(186, 230, 253, 0.75));
+            z-index: -2;
+        }
+        #particles-js {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        nav {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            padding: 1rem 5%;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .logo { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        .nav-links a {
+            color: #0f172a;
+            text-decoration: none;
+            margin: 0 1.4rem;
+            font-weight: 600;
+            position: relative;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2.5px;
+            bottom: -5px;
+            left: 0;
+            background: var(--primary);
+            transition: width 0.35s ease;
+        }
+        .nav-links a:hover::after,
+        .nav-links a.active::after { width: 100%; }
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--primary); }
+
+        .container {
+            max-width: 1200px;
+            margin: 120px auto 80px;
+            padding: 0 5%;
+        }
+        .result-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 3.5rem 3rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 12px 40px rgba(56, 189, 248, 0.25);
+            text-align: center;
+        }
+        h2 {
+            color: #0284c7;
+            margin-bottom: 2rem;
+            font-size: 2.6rem;
+            font-weight: 700;
+        }
+        h3 {
+            color: #0f172a;
+            margin: 1.5rem 0 1rem;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        .image-comparison {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            align-items: flex-start;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+        .image-box {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .image-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 1rem;
+        }
+        .image-label i {
+            color: var(--primary);
+        }
+        .uploaded-image, .enhanced-image {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            object-fit: contain;
+            border: 3px solid white;
+        }
+        .prediction-result {
+            font-size: 3.2rem;
+            font-weight: 800;
+            margin: 0.5rem 0 0.8rem;
+            color: #0284c7;
+            text-transform: capitalize;
+        }
+        .confidence {
+            font-size: 1.6rem;
+            color: #334155;
+            margin-bottom: 1rem;
+        }
+        .confidence strong {
+            color: #059669;
+            font-size: 1.8rem;
+        }
+        .enhancement-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 999px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1rem 0;
+        }
+        .error-message {
+            color: #dc2626;
+            font-size: 1.4rem;
+            margin: 1.5rem 0;
+            font-weight: 600;
+        }
+        .btn {
+            background: linear-gradient(45deg, #0ea5e9, #38bdf8);
+            color: white;
+            padding: 1.1rem 2.8rem;
+            border: none;
+            border-radius: 999px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.4s;
+            box-shadow: 0 8px 25px rgba(14,165,233,0.35);
+            margin: 0.5rem;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            box-shadow: 0 8px 25px rgba(16,185,129,0.35);
+        }
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 40px rgba(14,165,233,0.5);
+        }
+        .btn-success:hover {
+            box-shadow: 0 16px 40px rgba(16,185,129,0.5);
+        }
+        .upload-form {
+            margin-bottom: 3rem;
+        }
+        .upload-form input[type="file"] {
+            display: block;
+            margin: 1.5rem auto;
+            font-size: 1.1rem;
+            padding: 0.5rem;
+            background: rgba(255,255,255,0.5);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .info-text {
+            font-size: 1.2rem;
+            color: #475569;
+            margin: 1rem 0;
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        footer {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            padding: 1.8rem;
+            color: #475569;
+            border-top: 1px solid rgba(56, 189, 248, 0.25);
+            font-weight: 500;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .fade-in { animation: fadeIn 0.8s ease-out forwards; }
+        .slide-in { animation: slideIn 0.6s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav>
+        <div class="logo">Underwater Image AI</div>
+        <div class="nav-links">
+            <a href="{{ url_for('home') }}">Home</a>
+            <a href="{{ url_for('model') }}">Models</a>
+            <a href="{{ url_for('prediction') }}" class="active">Analyze & Enhance</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="result-card">
+            <h2>Image Quality Analysis & Enhancement</h2>
+
+            <!-- Upload form (shown when no result yet) -->
+            {% if not result or result.error %}
+            <div class="upload-form fade-in">
+                <form method="POST" enctype="multipart/form-data">
+                    <p style="font-size:1.3rem; margin-bottom:1.5rem; color:#334155;">
+                        <i class="fas fa-upload" style="color: var(--primary);"></i> 
+                        Upload an underwater image to analyze and enhance
+                    </p>
+                    <input type="file" name="file" accept="image/*" required>
+                    <button type="submit" class="btn">
+                        <i class="fas fa-magic"></i> Analyze & Enhance
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Error message -->
+            {% if result and result.error %}
+                <p class="error-message fade-in">
+                    <i class="fas fa-exclamation-circle"></i> {{ result.error }}
+                </p>
+                <a href="{{ url_for('prediction') }}" class="btn" style="margin-top:1rem;">
+                    <i class="fas fa-redo"></i> Try Again
+                </a>
+            {% endif %}
+
+            <!-- Prediction and enhancement result -->
+            {% if result and not result.error and original_exists %}
+                <div class="fade-in">
+                    <!-- Classification Result -->
+                    <div class="slide-in">
+                        <div class="prediction-result">
+                            <i class="fas fa-tag"></i> {{ result.prediction | replace('_', ' ') | title }}
+                        </div>
+                        <p class="confidence">
+                            Detection Confidence: <strong>{{ result.confidence }}%</strong>
+                        </p>
+                        
+                        {% if result.enhancement_applied %}
+                            <div class="enhancement-badge">
+                                <i class="fas fa-check-circle"></i> Adaptive Enhancement Applied
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Image Comparison Side by Side -->
+                    <h3>
+                        <i class="fas fa-chart-line"></i> Before vs After Enhancement
+                    </h3>
+                    
+                    <div class="image-comparison">
+                        <!-- Original Image -->
+                        <div class="image-box slide-in">
+                            <div class="image-label">
+                                <i class="fas fa-image"></i> Original Image
+                            </div>
+                            <img src="{{ url_for('static', filename='uploads/' + image_filename) }}"
+                                 alt="Original underwater image"
+                                 class="uploaded-image">
+                        </div>
+
+                        <!-- Enhanced Image -->
+                        {% if enhanced_filename %}
+                        <div class="image-box slide-in" style="animation-delay: 0.2s;">
+                            <div class="image-label">
+                                <i class="fas fa-wand-magic-sparkles" style="color: var(--success);"></i> 
+                                Enhanced Image
+                            </div>
+                            <img src="{{ url_for('static', filename='enhanced/' + enhanced_filename) }}"
+                                 alt="Enhanced underwater image"
+                                 class="enhanced-image">
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Enhancement Details -->
+                    {% if result.enhancement_applied %}
+                        <div class="info-text" style="margin-top: 1.5rem; padding: 1rem; background: rgba(16,185,129,0.1); border-radius: 12px;">
+                            <i class="fas fa-info-circle" style="color: var(--success);"></i>
+                            <strong>Enhancement applied:</strong> 
+                            {% if result.prediction == 'blue_tint' %}
+                                Color correction and white balancing applied to remove blue/green cast.
+                            {% elif result.prediction == 'blurry' %}
+                                Sharpening and deblurring applied to recover details.
+                            {% elif result.prediction == 'green_tint' %}
+                                Green cast removed, red/blue channels enhanced.
+                            {% elif result.prediction == 'hazy' %}
+                                Dehazing algorithm applied to remove haze and improve visibility.
+                            {% elif result.prediction == 'high_contrast' %}
+                                Contrast reduction and exposure balancing applied.
+                            {% elif result.prediction == 'low_illumination' %}
+                                Brightness enhancement and contrast stretching applied.
+                            {% elif result.prediction == 'noisy' %}
+                                Noise reduction and denoising applied.
+                            {% elif result.prediction == 'raw-890' %}
+                                Multiple enhancement techniques combined for optimal results.
+                            {% elif result.prediction == 'red_tint' %}
+                                Red cast removal and color balancing applied.
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    <div class="button-group">
+                        <a href="{{ url_for('prediction') }}" class="btn">
+                            <i class="fas fa-upload"></i> Analyze Another
+                        </a>
+                        
+                        {% if enhanced_filename %}
+                            <a href="{{ url_for('static', filename='enhanced/' + enhanced_filename) }}" 
+                               download="{{ enhanced_filename }}" 
+                               class="btn btn-success">
+                                <i class="fas fa-download"></i> Download Enhanced
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer>
+        <i class="fas fa-water"></i> Underwater Image AI | Quality Assessment & Adaptive Enhancement
+    </footer>
+
+    <script>
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 50, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#38bdf8" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.6, "random": true },
+                "size": { "value": 3.8, "random": true },
+                "line_linked": { "enable": true, "distance": 170, "color": "#7dd3fc", "opacity": 0.5, "width": 1.3 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                "modes": { "grab": { "distance": 150, "line_linked": { "opacity": 0.75 } }, "push": { "particles_nb": 4 } }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+</html> -->

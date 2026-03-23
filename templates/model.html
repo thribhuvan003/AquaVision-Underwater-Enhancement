@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Performance - Underwater Image AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <style>
+        :root {
+            --primary: #38bdf8;
+            --primary-dark: #0ea5e9;
+            --text: #0f172a;
+            --glass: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(56, 189, 248, 0.35);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body { height: 100%; margin: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: var(--text);
+            background: url('https://images.unsplash.com/photo-1505118380757-91f5f5632de0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover no-repeat fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(224, 247, 255, 0.85), rgba(186, 230, 253, 0.75));
+            z-index: -2;
+        }
+        #particles-js {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+        nav {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            padding: 1rem 5%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .logo { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+        .nav-links a {
+            color: #0f172a;
+            text-decoration: none;
+            margin: 0 1.4rem;
+            font-weight: 600;
+            position: relative;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2.5px;
+            bottom: -5px;
+            left: 0;
+            background: var(--primary);
+            transition: width 0.35s ease;
+        }
+        .nav-links a:hover::after,
+        .nav-links a.active::after { width: 100%; }
+        .nav-links a:hover,
+        .nav-links a.active { color: var(--primary); }
+
+        .main-content {
+            flex: 1 0 auto;
+            padding-top: 90px;     /* Space for fixed navbar */
+            padding-bottom: 80px;  /* Space for fixed footer */
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 5%;
+        }
+        .report-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 28px;
+            padding: 3rem;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 12px 40px rgba(56, 189, 248, 0.25);
+        }
+        h1 {
+            color: #0284c7;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.8rem;
+        }
+        h3 {
+            color: #0284c7;
+            margin: 2rem 0 1rem;
+            font-size: 1.8rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+        }
+        th {
+            background: rgba(56, 189, 248, 0.15);
+            font-weight: 700;
+            color: #0284c7;
+        }
+        .accuracy {
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: #059669;
+            text-align: center;
+            margin: 2.5rem 0;
+            padding: 1rem;
+            background: rgba(5, 150, 105, 0.1);
+            border-radius: 12px;
+        }
+        .avg-row {
+            background: rgba(56, 189, 248, 0.1);
+            font-weight: 600;
+        }
+        .select-form {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        select, button {
+            padding: 1rem 1.5rem;
+            font-size: 1.2rem;
+            border-radius: 12px;
+            margin: 0 1rem;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        footer {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            padding: 1.2rem;
+            color: #475569;
+            border-top: 1px solid rgba(56, 189, 248, 0.25);
+            font-weight: 500;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            z-index: 900;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <nav>
+        <div class="logo">Underwater Image AI</div>
+        <div class="nav-links">
+            <a href="{{ url_for('home') }}">Home</a>
+          
+            <a href="{{ url_for('model') }}" class="active">Models</a>
+            <a href="{{ url_for('prediction') }}">Analyze</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+     <br><br> <br><br>
+    <div class="main-content">
+        <div class="container">
+            <div class="report-card">
+                <h1>Model Performance Reports</h1>
+
+                <div class="select-form">
+                    <form method="POST">
+                        <select name="modelSelect">
+                            <option value="">-- Select Model --</option>
+                            <option value="mobilenet" {% if selected_model == 'mobilenet' %}selected{% endif %}>MobileNetV2</option>
+                            <option value="resnet" {% if selected_model == 'resnet' %}selected{% endif %}>ResNet</option>
+                            <option value="cnn" {% if selected_model == 'cnn' %}selected{% endif %}>Custom CNN</option>
+                        </select>
+                        <button type="submit">Show Report</button>
+                    </form>
+                </div>
+
+                {% if report %}
+                    <h3>Per-Class Metrics</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Precision</th>
+                                <th>Recall</th>
+                                <th>F1-Score</th>
+                                <th>Support</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cls, metrics in report.classes.items() %}
+                                <tr>
+                                    <td>{{ cls | replace('_', ' ') | title }}</td>
+                                    <td>{{ metrics.precision }}</td>
+                                    <td>{{ metrics.recall }}</td>
+                                    <td>{{ metrics['f1-score'] }}</td>
+                                    <td>{{ metrics.support }}</td>
+                                </tr>
+                            {% endfor %}
+                            <tr class="avg-row">
+                                <td>Macro Avg</td>
+                                <td>{{ report.macro_avg.precision }}</td>
+                                <td>{{ report.macro_avg.recall }}</td>
+                                <td>{{ report.macro_avg['f1-score'] }}</td>
+                                <td>-</td>
+                            </tr>
+                            <tr class="avg-row">
+                                <td>Weighted Avg</td>
+                                <td>{{ report.weighted_avg.precision }}</td>
+                                <td>{{ report.weighted_avg.recall }}</td>
+                                <td>{{ report.weighted_avg['f1-score'] }}</td>
+                                <td>-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="accuracy">
+                        Overall Accuracy: {{ (report.accuracy * 100)|round(2) }}%
+                    </div>
+                {% else %}
+                    <p style="text-align:center; font-size:1.3rem; color:#475569; margin-top:3rem;">
+                        Select a model above to view detailed performance metrics on the UIEB dataset.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 TECH • Nellore, Andhra Pradesh • All Rights Reserved</p>
+    </footer>
+
+    <script>
+        particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 50, "density": { "enable": true, "value_area": 800 } },
+                "color": { "value": "#38bdf8" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.6, "random": true },
+                "size": { "value": 3.8, "random": true },
+                "line_linked": { "enable": true, "distance": 170, "color": "#7dd3fc", "opacity": 0.5, "width": 1.3 },
+                "move": { "enable": true, "speed": 1.5, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                "modes": { "grab": { "distance": 150, "line_linked": { "opacity": 0.75 } }, "push": { "particles_nb": 4 } }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+</html>

@@ -16,17 +16,9 @@ env/
 .vscode/
 .idea/
 
-# Model files (too large for GitHub)
-*.pth
-*.h5
-*.pkl
-
-# Uploaded/enhanced images (generated at runtime)
+# Runtime generated images (will be recreated)
 static/uploads/
 static/enhanced/
-
-# Database
-*.db
 
 # OS
 .DS_Store

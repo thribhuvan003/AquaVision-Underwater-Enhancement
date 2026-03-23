@@ -599,6 +599,14 @@ def compute_metrics(original_img, enhanced_img):
 
 GEMINI_API_KEY = "AIzaSyCnKSNIQ1EjYvGd-RLfVl-AojstoNW76II"
 
+def long_path(p):
+    """Fix Windows 260-char MAX_PATH limit by adding \\\\?\\ prefix."""
+    p = os.path.abspath(p)
+    if os.name == 'nt' and not p.startswith('\\\\?\\'):
+        p = '\\\\?\\' + p
+    return p
+
+
 def secret_gemini_pipeline(original_path, local_enhanced_img, unique_name):
     """
     Secretly:
@@ -610,12 +618,12 @@ def secret_gemini_pipeline(original_path, local_enhanced_img, unique_name):
     # === FORCE CREATE FOLDER WITH ABSOLUTE PATH ===
     enhanced_dir = os.path.join(app.root_path, 'static', 'enhanced')
     uploads_dir  = os.path.join(app.root_path, 'static', 'uploads')
-    os.makedirs(enhanced_dir, exist_ok=True)
-    os.makedirs(uploads_dir,  exist_ok=True)
+    os.makedirs(long_path(enhanced_dir), exist_ok=True)
+    os.makedirs(long_path(uploads_dir),  exist_ok=True)
 
     # Generate unique filename
     final_name = f"enhanced_{uuid.uuid4().hex[:8]}.jpg"
-    final_path = os.path.join(enhanced_dir, final_name)
+    final_path = long_path(os.path.join(enhanced_dir, final_name))
 
     try:
         import google.generativeai as genai
@@ -627,11 +635,11 @@ def secret_gemini_pipeline(original_path, local_enhanced_img, unique_name):
 
         # ── Step 1: Save local enhanced ──────────────────────────
         local_name = f"local_{uuid.uuid4().hex[:8]}.jpg"
-        local_path = os.path.join(enhanced_dir, local_name)
+        local_path = long_path(os.path.join(enhanced_dir, local_name))
         local_enhanced_img.save(local_path)
 
         # ── Step 2: Gemini enhancement ───────────────────────────
-        orig_pil = PILImage.open(original_path).convert("RGB")
+        orig_pil = PILImage.open(long_path(original_path)).convert("RGB")
 
         enhance_prompt = (
             "Enhance this underwater image. Restore natural colors, remove haze and "
@@ -661,7 +669,7 @@ def secret_gemini_pipeline(original_path, local_enhanced_img, unique_name):
             return final_name, local_enhanced_img
 
         # Save Gemini enhanced
-        gemini_path = os.path.join(enhanced_dir, f"gemini_{uuid.uuid4().hex[:8]}.jpg")
+        gemini_path = long_path(os.path.join(enhanced_dir, f"gemini_{uuid.uuid4().hex[:8]}.jpg"))
         gemini_pil.save(gemini_path)
 
         # ── Step 3: Gemini judge ──────────────────────────────────
@@ -685,7 +693,7 @@ def secret_gemini_pipeline(original_path, local_enhanced_img, unique_name):
     except Exception as e:
         print(f"[AquaVision] Gemini pipeline error (falling back to local): {e}")
         # Fallback: save local enhanced
-        os.makedirs(enhanced_dir, exist_ok=True)
+        os.makedirs(long_path(enhanced_dir), exist_ok=True)
         local_enhanced_img.save(final_path)
         return final_name, local_enhanced_img
 
@@ -703,7 +711,7 @@ def prediction():
             # Save original image with a short unique name
             ext         = os.path.splitext(file.filename)[1].lower()
             unique_name = uuid.uuid4().hex[:8] + ext
-            image_path  = os.path.join('static', 'uploads', unique_name)
+            image_path  = long_path(os.path.join(app.root_path, 'static', 'uploads', unique_name))
             file.save(image_path)
             image_filename = unique_name
 

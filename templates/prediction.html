@@ -252,24 +252,6 @@
     .error-card i { font-size: 2rem; color: var(--danger); margin-bottom: .8rem; }
     .error-card p { font-size: 1.1rem; color: var(--danger); font-weight: 600; }
 
-    /* ─── Prediction Badge ─── */
-    .pred-strip {
-      display: flex; align-items: center; flex-wrap: wrap; gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .pred-badge {
-      display: flex; align-items: center; gap: .6rem;
-      background: var(--glass); border: 1px solid var(--glass-border);
-      border-radius: 99px; padding: .6rem 1.4rem;
-      backdrop-filter: blur(10px);
-    }
-    .pred-badge .label { font-size: .75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-    .pred-badge .value { font-size: 1rem; font-weight: 700; color: var(--cyan); text-transform: capitalize; }
-    .conf-bar-wrap { flex: 1; min-width: 200px; }
-    .conf-label { font-size: .8rem; color: var(--text-muted); margin-bottom: .3rem; }
-    .conf-bar { height: 6px; background: var(--glass); border-radius: 99px; overflow: hidden; }
-    .conf-bar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--success)); border-radius: 99px; transition: width 1s ease; }
-
     /* ─── Before / After Slider ─── */
     .slider-container {
       position: relative; border-radius: 20px; overflow: hidden;
@@ -344,92 +326,6 @@
       color: var(--text); backdrop-filter: blur(10px);
     }
     .btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
-    .btn-grad-cam {
-      background: linear-gradient(135deg, #7c3aed, #db2777);
-      color: #fff; box-shadow: 0 6px 24px rgba(124,58,237,.35);
-    }
-    .btn-grad-cam:hover { transform: translateY(-3px); box-shadow: 0 12px 36px rgba(124,58,237,.5); }
-    .btn-grad-cam.active {
-      background: linear-gradient(135deg, #db2777, #f97316);
-    }
-
-    /* ─── Grad-CAM overlay ─── */
-    .gradcam-wrap {
-      position: relative; border-radius: 20px; overflow: hidden;
-      max-width: 500px; margin: 0 auto 2rem;
-      display: none;
-    }
-    .gradcam-wrap.visible { display: block; }
-    .gradcam-wrap img { width: 100%; display: block; border-radius: 20px; }
-    .gradcam-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(rgba(255,80,0,.0) 0%, rgba(255,30,0,.55) 60%, rgba(255,200,0,.3) 100%);
-      mix-blend-mode: multiply;
-      border-radius: 20px;
-      opacity: 0; transition: opacity .5s;
-      pointer-events: none;
-    }
-    .gradcam-wrap.heatmap .gradcam-overlay { opacity: 1; }
-    .gradcam-label {
-      position: absolute; bottom: .8rem; left: 1rem;
-      background: rgba(255,0,0,.8); color: #fff;
-      font-size: .72rem; font-weight: 700; letter-spacing: 1px;
-      padding: .25rem .7rem; border-radius: 99px;
-      opacity: 0; transition: opacity .5s;
-    }
-    .gradcam-wrap.heatmap .gradcam-label { opacity: 1; }
-
-    /* ─── Metrics Cards ─── */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1.2rem; margin-bottom: 2.5rem;
-    }
-    .metric-card {
-      background: var(--glass); border: 1px solid var(--glass-border);
-      border-radius: var(--radius); padding: 1.6rem 1.5rem;
-      backdrop-filter: blur(14px);
-      transition: var(--transition);
-      position: relative; overflow: hidden;
-    }
-    .metric-card:hover { border-color: var(--cyan); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,212,255,.15); }
-    .metric-card::before {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(135deg, var(--cyan-glow) 0%, transparent 60%);
-      opacity: 0; transition: opacity .4s;
-    }
-    .metric-card:hover::before { opacity: 1; }
-    .metric-name { font-size: .72rem; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: .4rem; }
-    .metric-value {
-      font-size: 2.4rem; font-weight: 800;
-      background: linear-gradient(135deg, #fff, var(--cyan));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      line-height: 1;
-    }
-    .metric-delta {
-      display: inline-flex; align-items: center; gap: .25rem;
-      font-size: .8rem; font-weight: 600; margin-top: .5rem;
-    }
-    .delta-up   { color: var(--success); }
-    .delta-down { color: var(--danger); }
-    .sparkline {
-      position: absolute; bottom: 0; right: 0;
-      width: 80px; height: 40px; opacity: .4;
-    }
-    .metric-desc { font-size: .72rem; color: var(--text-muted); margin-top: .3rem; }
-
-    /* ─── Enhancement Note ─── */
-    .enh-note {
-      background: rgba(0,212,255,.08);
-      border-left: 3px solid var(--cyan);
-      border-radius: 0 12px 12px 0;
-      padding: 1rem 1.4rem;
-      margin-bottom: 2rem;
-      font-size: .9rem;
-      color: var(--text-muted);
-    }
-    .enh-note strong { color: var(--cyan); }
-
     /* ═══════════════════════════  FOOTER  ═══════════════════════════════ */
     footer {
       text-align: center; padding: 2rem;
@@ -442,7 +338,6 @@
     @media (max-width: 640px) {
       .hero { padding: 2rem 5% 1rem; }
       .sample-grid { grid-template-columns: repeat(2, 1fr); }
-      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
       .slider-container { aspect-ratio: 4/3; }
       .action-row { flex-direction: column; align-items: stretch; }
       .action-row .btn { justify-content: center; }
@@ -541,20 +436,6 @@
       {% endif %}
 
       {% if result and not result.error %}
-      <!-- ─ Prediction Label ─ -->
-      <div class="pred-strip fade-up">
-        <div class="pred-badge">
-          <span class="label">Detected</span>
-          <span class="value">{{ result.prediction | replace('_', ' ') | title }}</span>
-        </div>
-        <div class="conf-bar-wrap">
-          <div class="conf-label">Confidence: <strong style="color:var(--success);">{{ result.confidence }}%</strong></div>
-          <div class="conf-bar">
-            <div class="conf-bar-fill" style="width:{{ result.confidence }}%"></div>
-          </div>
-        </div>
-      </div>
-
       <!-- ─ Before / After Slider ─ -->
       <div class="slider-container" id="comparison-slider" style="position:relative;">
         <img class="img-enhanced"
@@ -578,88 +459,9 @@
           <i class="fas fa-download"></i> Download Enhanced
         </a>
         {% endif %}
-        <button id="gradcam-btn" class="btn btn-grad-cam">
-          <i class="fas fa-fire"></i> Show Grad-CAM Focus
-        </button>
         <a href="{{ url_for('prediction') }}" class="btn btn-outline">
           <i class="fas fa-upload"></i> New Image
         </a>
-      </div>
-
-      <!-- ─ Fake Grad-CAM ─ -->
-      <div class="gradcam-wrap" id="gradcam-wrap">
-        <img src="{{ url_for('static', filename='enhanced/' + enhanced_filename) if enhanced_filename else '' }}"
-             alt="Grad-CAM">
-        <div class="gradcam-overlay"></div>
-        <div class="gradcam-label">🔥 MODEL ATTENTION MAP</div>
-      </div>
-
-      <!-- ─ Metrics Cards ─ -->
-      {% if metrics %}
-      <div class="metrics-grid fade-up" id="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-name">UIQM</div>
-          <div class="metric-value" id="m-uiqm">{{ metrics.uiqm }}</div>
-          <div class="metric-delta delta-up"><i class="fas fa-arrow-trend-up"></i> Quality Index ↑</div>
-          <div class="metric-desc">Underwater Image Quality Measure</div>
-          <svg class="sparkline" viewBox="0 0 80 40">
-            <polyline points="0,35 15,28 30,20 45,14 60,8 80,4" fill="none" stroke="#00d4ff" stroke-width="2"/>
-          </svg>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">UCIQE</div>
-          <div class="metric-value" id="m-uciqe">{{ metrics.uciqe }}</div>
-          <div class="metric-delta delta-up"><i class="fas fa-arrow-trend-up"></i> Chroma ↑</div>
-          <div class="metric-desc">Underwater Color Image Quality</div>
-          <svg class="sparkline" viewBox="0 0 80 40">
-            <polyline points="0,38 20,30 40,22 60,12 80,6" fill="none" stroke="#00d4ff" stroke-width="2"/>
-          </svg>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">PSNR</div>
-          <div class="metric-value" id="m-psnr">{{ metrics.psnr }} <span style="font-size:1rem;font-weight:400;color:var(--text-muted);">dB</span></div>
-          <div class="metric-delta delta-up"><i class="fas fa-signal"></i> Signal Quality</div>
-          <div class="metric-desc">Peak Signal-to-Noise Ratio</div>
-          <svg class="sparkline" viewBox="0 0 80 40">
-            <polyline points="0,36 20,29 40,20 65,11 80,7" fill="none" stroke="#00d4ff" stroke-width="2"/>
-          </svg>
-        </div>
-        <div class="metric-card">
-          <div class="metric-name">SSIM</div>
-          <div class="metric-value" id="m-ssim">{{ metrics.ssim }}</div>
-          <div class="metric-delta delta-up"><i class="fas fa-eye"></i> Structural Similarity</div>
-          <div class="metric-desc">Structural Similarity Index</div>
-          <svg class="sparkline" viewBox="0 0 80 40">
-            <polyline points="0,30 25,22 50,14 70,8 80,5" fill="none" stroke="#00d4ff" stroke-width="2"/>
-          </svg>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- ─ Enhancement Note ─ -->
-      <div class="enh-note fade-up">
-        <strong><i class="fas fa-circle-info"></i> Enhancement Applied: </strong>
-        {% if result.prediction == 'blue_tint' %}
-            Blue color cast correction with white balance adjustment
-        {% elif result.prediction == 'green_tint' %}
-            Green color cast correction and color compensation
-        {% elif result.prediction == 'red_tint' %}
-            Red color cast reduction and color balancing
-        {% elif result.prediction == 'blurry' %}
-            Unsharp masking + kernel-based sharpening (dual-pass)
-        {% elif result.prediction == 'hazy' %}
-            Dark-channel dehazing with contrast enhancement
-        {% elif result.prediction == 'low_illumination' %}
-            CLAHE on L-channel (LAB color space) + brightness boost
-        {% elif result.prediction == 'noisy' %}
-            Non-local means denoising + median filter
-        {% elif result.prediction == 'high_contrast' %}
-            Contrast reduction with gamma correction (γ=0.9)
-        {% elif result.prediction == 'raw-890' %}
-            Comprehensive multi-scale underwater enhancement suite
-        {% else %}
-            Adaptive multi-scale enhancement
-        {% endif %}
       </div>
 
       {% endif %}{# end result #}
@@ -826,54 +628,7 @@ document.getElementById('upload-form').addEventListener('submit', ()=>showLoader
   slider.addEventListener('click', e=>setPosition(e.clientX));
 })();
 
-/* ─── Grad-CAM Toggle ─── */
-const gcBtn  = document.getElementById('gradcam-btn');
-const gcWrap = document.getElementById('gradcam-wrap');
-if(gcBtn && gcWrap){
-  gcBtn.addEventListener('click', ()=>{
-    gcWrap.classList.toggle('visible');
-    gcWrap.classList.toggle('heatmap');
-    if(gcWrap.classList.contains('heatmap')){
-      gcBtn.classList.add('active');
-      gcBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Grad-CAM';
-    } else {
-      gcBtn.classList.remove('active');
-      gcBtn.innerHTML = '<i class="fas fa-fire"></i> Show Grad-CAM Focus';
-    }
-  });
-}
-
-/* ─── Counter animation for metrics ─── */
-function animateNumber(el, target, duration=1200, isFloat=true){
-  const start = 0;
-  const startTime = performance.now();
-  const unit = el.dataset.unit || '';
-  function tick(now){
-    const pct = Math.min((now-startTime)/duration, 1);
-    const ease = 1-Math.pow(1-pct,3);
-    const val = start + (target-start)*ease;
-    el.textContent = isFloat ? val.toFixed(isFloat===2?2:1) + unit : Math.round(val) + unit;
-    if(pct<1) requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-}
 window.addEventListener('DOMContentLoaded', ()=>{
-  const metricsGrid = document.getElementById('metrics-grid');
-  if(!metricsGrid) return;
-  const obs = new IntersectionObserver(entries=>{
-    if(entries[0].isIntersecting){
-      const uiqm  = document.getElementById('m-uiqm');
-      const uciqe = document.getElementById('m-uciqe');
-      const psnr  = document.getElementById('m-psnr');
-      const ssim  = document.getElementById('m-ssim');
-      if(uiqm)  animateNumber(uiqm,  parseFloat(uiqm.textContent),  1000, 2);
-      if(uciqe) animateNumber(uciqe, parseFloat(uciqe.textContent), 1000, 3);
-      if(ssim)  animateNumber(ssim,  parseFloat(ssim.textContent),  1000, 3);
-      obs.disconnect();
-    }
-  },{threshold:.3});
-  obs.observe(metricsGrid);
-
   // Scroll to result if it exists
   const rs = document.getElementById('result-section');
   if(rs && !rs.classList.contains('hidden')){

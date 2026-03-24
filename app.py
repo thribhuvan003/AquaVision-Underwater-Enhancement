@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 from torchvision import models
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import numpy as np
 import cv2
 from flask import Flask, render_template, request, redirect, url_for, session
@@ -32,9 +32,16 @@ from flask import Flask, session, render_template, request, redirect, url_for, g
 from timm import create_model
 import os
 
+from clarity_pipeline import (
+    build_local_clarity_candidates,
+    build_gemini_clarity_candidates,
+    choose_best_candidate,
+)
+
 
 app = Flask(__name__)
 app.secret_key = 'admin'
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB max upload
 
 DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'under.db')
 
@@ -178,6 +185,16 @@ def about():
     return render_template('about.html')
 
 
+@app.errorhandler(413)
+def file_too_large(_error):
+    return render_template(
+        'prediction.html',
+        result={"error": "File too large. Maximum upload size is 16MB."},
+        image_filename=None,
+        enhanced_filename=None
+    ), 413
+
+
 
 
 # Model performance reports (hardcoded from your provided results)
@@ -318,7 +335,7 @@ if not os.path.exists(MODEL_PATH):
 else:
     try:
         model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
-        print("✓ Underwater classification model loaded successfully")
+        print("Underwater classification model loaded successfully")
     except Exception as e:
         print("Error loading model:", str(e))
         print("Common causes: wrong number of classes, different architecture, or corrupted file")
@@ -503,6 +520,12 @@ ENHANCEMENT_MAP = {
     'raw-890': enhance_raw_890
 }
 
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+def is_allowed_image(filename):
+    ext = os.path.splitext(filename)[1].lower()
+    return ext in ALLOWED_IMAGE_EXTENSIONS
+
 def apply_enhancement(image, degradation_type):
     """Apply appropriate enhancement based on degradation type"""
     if degradation_type in ENHANCEMENT_MAP:
@@ -597,7 +620,7 @@ def compute_metrics(original_img, enhanced_img):
 #  GEMINI SECRET BACKEND
 # ────────────────────────────────────────────────────────────────
 
-GEMINI_API_KEY = "AIzaSyCnKSNIQ1EjYvGd-RLfVl-AojstoNW76II"
+GEMINI_API_KEY = "AIzaSyDJYNJ-HVuHVXJpnP8APVK4dvnCUtLsTJU"
 
 def long_path(p):
     """Fix Windows 260-char MAX_PATH limit by adding \\\\?\\ prefix."""
@@ -615,87 +638,191 @@ def secret_gemini_pipeline(original_path, local_enhanced_img, unique_name):
       3. Send both to Gemini as judge → pick winner
       4. Return (winner_filename, winner_pil_image)
     """
-    # === FORCE CREATE FOLDER WITH ABSOLUTE PATH ===
+    import os, uuid
     enhanced_dir = os.path.join(app.root_path, 'static', 'enhanced')
-    uploads_dir  = os.path.join(app.root_path, 'static', 'uploads')
-    os.makedirs(long_path(enhanced_dir), exist_ok=True)
-    os.makedirs(long_path(uploads_dir),  exist_ok=True)
+    os.makedirs(enhanced_dir, exist_ok=True)
+    unique_name = f"enhanced_{uuid.uuid4().hex[:8]}.jpg"
+    final_path = os.path.join(enhanced_dir, unique_name)
 
-    # Generate unique filename
-    final_name = f"enhanced_{uuid.uuid4().hex[:8]}.jpg"
-    final_path = long_path(os.path.join(enhanced_dir, final_name))
-
+    local_enhanced = local_enhanced_img
     try:
-        import google.generativeai as genai
-        from PIL import Image as PILImage
-        import io, base64
+        def _save_final(pil_img, path):
+            pil_img = pil_img.convert("RGB")
+            pil_img.save(path, format="JPEG", quality=95, subsampling=0, optimize=True)
 
-        genai.configure(api_key=GEMINI_API_KEY)
-        model_gemini = genai.GenerativeModel("gemini-1.5-pro")
+        def _lap_var(pil_img):
+            arr = np.array(pil_img.convert("RGB"))
+            g = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+            return float(cv2.Laplacian(g, cv2.CV_64F).var())
 
-        # ── Step 1: Save local enhanced ──────────────────────────
-        local_name = f"local_{uuid.uuid4().hex[:8]}.jpg"
-        local_path = long_path(os.path.join(enhanced_dir, local_name))
-        local_enhanced_img.save(local_path)
+        # STEP 1 → local_enhanced_img already comes from local MobileNet + adaptive fusion flow.
+        if local_enhanced is None:
+            _, _, local_enhanced = predict_underwater_image(original_path)
+        if local_enhanced is None:
+            return unique_name, None
 
-        # ── Step 2: Gemini enhancement ───────────────────────────
-        orig_pil = PILImage.open(long_path(original_path)).convert("RGB")
+        # Build higher-clarity local candidates (classical + optional deep).
+        local_candidates = build_local_clarity_candidates(local_enhanced)
+        local_best_name, local_best_img = choose_best_candidate(local_enhanced, local_candidates, "LOCAL")
 
-        enhance_prompt = (
-            "Enhance this underwater image. Restore natural colors, remove haze and "
-            "tint, increase clarity and sharpness, make it vivid and realistic. "
-            "Return only the enhanced image with no text, marks or watermarks."
+        # STEP 2 → Send ORIGINAL image to Gemini 1.5 Flash
+        gemini_enhanced = None
+        orig_pil = None
+        try:
+            from google import genai as genai_new
+            from google.genai import types as genai_types
+            from PIL import Image as PILImage
+            import io, base64
+
+            client = genai_new.Client(api_key=GEMINI_API_KEY)
+
+            orig_pil = PILImage.open(original_path).convert("RGB")
+            ow, oh = orig_pil.size
+            low_res_input = max(ow, oh) < 800
+
+            enhance_prompt = (
+                "Enhance this underwater image for marine research quality. Restore natural colors "
+                "especially reds and corals, remove haze and color cast, recover fine details and "
+                "edge clarity, and keep geometry realistic with no painterly artifacts."
+            )
+
+            buf = io.BytesIO()
+            orig_pil.save(buf, format="JPEG")
+            image_part = genai_types.Part.from_bytes(data=buf.getvalue(), mime_type="image/jpeg")
+
+            gemini_response = client.models.generate_content(
+                model="gemini-2.5-flash-image",
+                contents=[enhance_prompt, image_part],
+                config=genai_types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+            )
+
+            if gemini_response and getattr(gemini_response, "candidates", None):
+                for part in gemini_response.candidates[0].content.parts:
+                    if hasattr(part, "inline_data") and part.inline_data:
+                        img_bytes = part.inline_data.data
+                        if isinstance(img_bytes, str):
+                            img_bytes = base64.b64decode(img_bytes)
+                        gemini_enhanced = PILImage.open(io.BytesIO(img_bytes)).convert("RGB")
+                        break
+
+            # For low-res underwater inputs, run one extra Gemini pass focused on
+            # detail reconstruction while preserving realism.
+            if low_res_input and gemini_enhanced is not None:
+                second_prompt = (
+                    "Refine this underwater image to improve natural detail clarity and dehazing. "
+                    "Keep it photorealistic, avoid watercolor or over-smoothed textures, and keep "
+                    "scene structure consistent."
+                )
+                buf2 = io.BytesIO()
+                gemini_enhanced.save(buf2, format="JPEG")
+                second_part = genai_types.Part.from_bytes(data=buf2.getvalue(), mime_type="image/jpeg")
+                second_resp = client.models.generate_content(
+                    model="gemini-2.5-flash-image",
+                    contents=[second_prompt, second_part],
+                    config=genai_types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+                )
+                if second_resp and getattr(second_resp, "candidates", None):
+                    for part in second_resp.candidates[0].content.parts:
+                        if hasattr(part, "inline_data") and part.inline_data:
+                            img_bytes = part.inline_data.data
+                            if isinstance(img_bytes, str):
+                                img_bytes = base64.b64decode(img_bytes)
+                            gemini_enhanced = PILImage.open(io.BytesIO(img_bytes)).convert("RGB")
+                            break
+
+        except Exception:
+            gemini_enhanced = None
+
+        # If Gemini enhancement failed, silently fallback to local.
+        if gemini_enhanced is None:
+            _save_final(local_best_img, final_path)
+            return unique_name, local_best_img
+
+        # STEP 3 → Judge: send BOTH images back to Gemini
+        gemini_candidates = build_gemini_clarity_candidates(gemini_enhanced)
+        _, gemini_best_img = choose_best_candidate(
+            gemini_enhanced, gemini_candidates, "GEMINI"
         )
+        winner_img = gemini_best_img
+        gemini_vote = None
+        try:
+            import google.generativeai as genai
 
-        gemini_response = model_gemini.generate_content(
-            [enhance_prompt, orig_pil],
-            generation_config={"response_mime_type": "image/jpeg"}
-        )
+            genai.configure(api_key=GEMINI_API_KEY)
+            model_gemini = genai.GenerativeModel("gemini-1.5-flash")
 
-        # Extract image from Gemini response
-        gemini_pil = None
-        if gemini_response.candidates:
-            for part in gemini_response.candidates[0].content.parts:
-                if hasattr(part, 'inline_data') and part.inline_data:
-                    img_bytes = part.inline_data.data
-                    if isinstance(img_bytes, str):
-                        img_bytes = base64.b64decode(img_bytes)
-                    gemini_pil = PILImage.open(io.BytesIO(img_bytes)).convert("RGB")
-                    break
+            judge_prompt = (
+                "I have two enhanced versions of the same underwater image.\n"
+                "Which one looks better for marine research — better color, clarity, no artifacts?\n"
+                "Reply with only: LOCAL or GEMINI"
+            )
 
-        if gemini_pil is None:
-            # Gemini gave no image → local wins
-            local_enhanced_img.save(final_path)
-            return final_name, local_enhanced_img
+            # Ensure we're sending actual PIL images.
+            local_pil = local_best_img.convert("RGB")
+            gemini_pil = gemini_best_img.convert("RGB")
 
-        # Save Gemini enhanced
-        gemini_path = long_path(os.path.join(enhanced_dir, f"gemini_{uuid.uuid4().hex[:8]}.jpg"))
-        gemini_pil.save(gemini_path)
+            judge_resp = model_gemini.generate_content([judge_prompt, local_pil, gemini_pil])
+            verdict = (judge_resp.text or "").strip().upper()
 
-        # ── Step 3: Gemini judge ──────────────────────────────────
-        judge_prompt = (
-            "Compare these two enhanced versions of the same underwater image. "
-            "Choose which one is better (better color restoration, clarity, natural "
-            "look, no artifacts). Reply with ONLY one word: 'first' if the first "
-            "image is better, or 'second' if the second image is better."
-        )
+            gemini_vote = "GEMINI" if (verdict.startswith("GEMINI") or "GEMINI" in verdict) else "LOCAL"
 
-        local_pil  = PILImage.open(local_path).convert("RGB")
-        judge_resp = model_gemini.generate_content([judge_prompt, local_pil, gemini_pil])
-        verdict    = judge_resp.text.strip().lower() if judge_resp.text else "second"
+            # Quality-gated final winner (Gemini vote is a soft signal).
+            # Compare against original scene if available; this keeps naturalness while
+            # still strongly preferring Gemini-level clarity.
+            reference = orig_pil if orig_pil is not None else local_pil
+            final_candidates = {f"{local_best_name}": local_pil, "gemini": gemini_pil}
+            _, winner_img = choose_best_candidate(reference, final_candidates, gemini_vote)
 
-        winner_img = local_pil if "first" in verdict else gemini_pil
-        winner_img.save(final_path)
+        except Exception:
+            # If judge fails, keep strongest Gemini candidate.
+            winner_img = gemini_best_img
 
-        print(f"[AquaVision] Gemini judge picked: {'local' if 'first' in verdict else 'gemini'}")
-        return final_name, winner_img
+        # STEP 4 → Return whichever one Gemini picks as winner (save only the winner)
+        if winner_img is None and local_enhanced_img is not None:
+            winner_img = local_enhanced_img
 
-    except Exception as e:
-        print(f"[AquaVision] Gemini pipeline error (falling back to local): {e}")
-        # Fallback: save local enhanced
-        os.makedirs(long_path(enhanced_dir), exist_ok=True)
-        local_enhanced_img.save(final_path)
-        return final_name, local_enhanced_img
+        # Anti-regression guard: do not accept winners that collapse clarity too far
+        # below the best local candidate.
+        try:
+            if winner_img is not None and local_best_img is not None:
+                winner_lap = _lap_var(winner_img)
+                local_lap = _lap_var(local_best_img)
+                if winner_lap < (0.82 * local_lap):
+                    winner_img = local_best_img
+                    winner_lap = local_lap
+
+                # Additional guard: do not return outputs that are significantly less
+                # clear than the original image.
+                orig_img_guard = Image.open(original_path).convert("RGB")
+                orig_lap = _lap_var(orig_img_guard)
+                if winner_lap < (0.95 * orig_lap):
+                    # Rescue pass from original: very mild unsharp to recover detail
+                    # without introducing heavy artifacts.
+                    arr = np.array(orig_img_guard.convert("RGB"))
+                    g = cv2.GaussianBlur(arr, (0, 0), 1.1)
+                    rescue = cv2.addWeighted(arr, 1.35, g, -0.35, 0)
+                    rescue_img = Image.fromarray(np.clip(rescue, 0, 255).astype(np.uint8))
+                    rescue_lap = _lap_var(rescue_img)
+                    # Pick the best safe fallback among local and rescue.
+                    winner_img = rescue_img if rescue_lap >= local_lap else local_best_img
+        except Exception:
+            pass
+
+        _save_final(winner_img, final_path)
+        return unique_name, winner_img
+
+    except Exception:
+        # If Gemini API fails at any step (or anything else), silently fallback to local.
+        try:
+            fallback_img = local_enhanced if local_enhanced is not None else local_enhanced_img
+            if fallback_img is not None:
+                _save_final(fallback_img, final_path)
+                return unique_name, fallback_img
+        except Exception:
+            pass
+
+        # Last-resort: return the provided local image object without saving (shouldn't happen).
+        return unique_name, local_enhanced_img
 
 
 @app.route('/prediction', methods=["GET", "POST"])
@@ -703,33 +830,56 @@ def prediction():
     result            = None
     image_filename    = None
     enhanced_filename = None
-    metrics           = None
 
     if request.method == "POST":
         file = request.files.get('file')
-        if file and file.filename != '':
+        if not file or file.filename == "":
+            result = {"error": "Please upload an image file."}
+        elif not is_allowed_image(file.filename):
+            result = {"error": "Unsupported file type. Please upload JPG, JPEG, PNG, or WEBP."}
+        else:
             # Save original image with a short unique name
             ext         = os.path.splitext(file.filename)[1].lower()
             unique_name = uuid.uuid4().hex[:8] + ext
             image_path  = long_path(os.path.join(app.root_path, 'static', 'uploads', unique_name))
-            file.save(image_path)
+            try:
+                file.save(image_path)
+            except Exception:
+                result = {"error": "Could not save uploaded image. Please try again."}
+                return render_template('prediction.html',
+                                       result=result,
+                                       image_filename=image_filename,
+                                       enhanced_filename=enhanced_filename)
             image_filename = unique_name
 
             # Step 1 – Local classification + adaptive enhancement
-            result, original_img, local_enhanced_img = predict_underwater_image(image_path)
+            try:
+                result, original_img, local_enhanced_img = predict_underwater_image(image_path)
+            except UnidentifiedImageError:
+                result = {"error": "Invalid image content. Please upload a valid image file."}
+                return render_template('prediction.html',
+                                       result=result,
+                                       image_filename=None,
+                                       enhanced_filename=None)
+            except Exception:
+                result = {"error": "Image processing failed. Please try again."}
+                return render_template('prediction.html',
+                                       result=result,
+                                       image_filename=None,
+                                       enhanced_filename=None)
 
             if local_enhanced_img and 'error' not in result:
                 # Step 2+3 – Secret Gemini pipeline (judge picks winner)
                 enhanced_filename, winner_img = secret_gemini_pipeline(
                     image_path, local_enhanced_img, unique_name
                 )
-                metrics = compute_metrics(original_img, winner_img)
+                if winner_img is None:
+                    result = {"error": "Enhancement failed. Please try a different image."}
 
     return render_template('prediction.html',
                            result=result,
                            image_filename=image_filename,
-                           enhanced_filename=enhanced_filename,
-                           metrics=metrics)
+                           enhanced_filename=enhanced_filename)
 
 @app.route('/logout')
 def logout():
@@ -737,4 +887,4 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", "0") == "1")
